@@ -723,46 +723,48 @@ async def kurangmasaaktif(update, context):
     msg = update.message
 
     if len(context.args) < 2:
-        return await msg.reply_text("FORMAT: /kurangmasaaktif user_id hari")
+        return await msg.reply_text("FORMAT: /kurangmasaaktif nama hari")
 
-    uid = str(context.args[0])
-    days = int(context.args[1])
+    name = context.args[0].lower().strip()
 
-    found = False
+    try:
+        days = int(context.args[1])
+    except:
+        return await msg.reply_text("HARI HARUS ANGKA")
 
     for g in groups_col.find():
-        if uid in g.get("premium_users", {}):
+        for uid, data in g.get("premium_users", {}).items():
 
-            found = True
-            user = g["premium_users"][uid]
+            if data.get("name", "").lower().strip() == name:
 
-            if user["expire"] == -1:
-                return await msg.reply_text("USER SELAMANYA TIDAK BISA DIKURANGI")
+                user = data
 
-            user["expire"] -= days * 86400
+                if user["expire"] == -1:
+                    return await msg.reply_text("USER SELAMANYA")
 
-            if user["expire"] <= time.time():
-                del g["premium_users"][uid]
-                g.get("allowed_users", {}).pop(uid, None)
+                user["expire"] -= days * 86400
+
+                if user["expire"] <= time.time():
+                    del g["premium_users"][uid]
+                    g.get("allowed_users", {}).pop(uid, None)
+
+                    groups_col.update_one(
+                        {"chat_id": g["chat_id"]},
+                        {"$set": g}
+                    )
+
+                    return await msg.reply_text("PREMIUM DIHAPUS (EXPIRED)")
+
+                g["premium_users"][uid] = user
 
                 groups_col.update_one(
                     {"chat_id": g["chat_id"]},
                     {"$set": g}
                 )
 
-                return await msg.reply_text("PREMIUM DIHAPUS (EXPIRED)")
+                return await msg.reply_text("MASA AKTIF DIKURANGI")
 
-            g["premium_users"][uid] = user
-
-            groups_col.update_one(
-                {"chat_id": g["chat_id"]},
-                {"$set": g}
-            )
-
-            return await msg.reply_text("MASA AKTIF DIKURANGI")
-
-    if not found:
-        await msg.reply_text("USER TIDAK DITEMUKAN")
+    await msg.reply_text("USER TIDAK DITEMUKAN")
 
 #================= MAIN =================
 
