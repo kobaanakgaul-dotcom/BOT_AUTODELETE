@@ -722,39 +722,44 @@ async def tambahmasaaktif(update, context):
 async def kurangmasaaktif(update, context):
     msg = update.message
 
-    mode = context.args[0].lower()
-    uid = context.args[1]
+    if len(context.args) < 2:
+        return await msg.reply_text("FORMAT: /kurangmasaaktif user_id hari")
 
-    g = get_group("default")  # sesuaikan kalau kamu pakai gid
+    uid = context.args[0]
+    days = int(context.args[1])
 
-    if uid not in g.get("premium_users", {}):
-        return await msg.reply_text("User tidak ditemukan di premium")
+    for g in groups_col.find():
+        if uid in g.get("premium_users", {}):
 
-    user = g["premium_users"][uid]
+            user = g["premium_users"][uid]
 
-    # kalau selamanya
-    if user["expire"] == -1:
-        return await msg.reply_text("User selamanya tidak bisa dikurangi")
+            if user["expire"] == -1:
+                return await msg.reply_text("USER SELAMANYA TIDAK BISA DIKURANGI")
 
-    try:
-        days = int(mode)
-    except ValueError:
-        return await msg.reply_text("Masukkan jumlah hari")
+            user["expire"] -= days * 86400
 
-    # KURANGI masa aktif dengan benar
-    user["expire"] -= days * 86400
+            if user["expire"] <= time.time():
+                del g["premium_users"][uid]
+                g["allowed_users"].pop(uid, None)
 
-    # kalau sudah lewat sekarang → hapus premium
-    if user["expire"] <= time.time():
-        del g["premium_users"][uid]
-        g["allowed_users"].pop(uid, None)
-        save_group(g)
-        return await msg.reply_text("Premium sudah habis dan dihapus")
+                groups_col.update_one(
+                    {"chat_id": g["chat_id"]},
+                    {"$set": g}
+                )
 
-    g["premium_users"][uid] = user
-    save_group(g)
+                return await msg.reply_text("PREMIUM DIHAPUS (EXPIRED)")
 
-    await msg.reply_text("MASA AKTIF BERHASIL DIKURANGI")
+            g["premium_users"][uid] = user
+
+            groups_col.update_one(
+                {"chat_id": g["chat_id"]},
+                {"$set": g}
+            )
+
+            return await msg.reply_text("MASA AKTIF DIKURANGI")
+
+    await msg.reply_text("USER TIDAK DITEMUKAN")
+
 #================= MAIN =================
 
 app = ApplicationBuilder().token(TOKEN).build()
