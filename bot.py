@@ -729,15 +729,15 @@ async def kurangmasaaktif(update, context):
                 new_expire = data["expire"] - (reduce_days * 86400)
 
                 if new_expire <= now:
-    del g["premium_users"][uid]
-    g.get("allowed_users", {}).pop(uid, None)
-    g.get("targets", {}).pop(uid, None)
-else:
-    g["premium_users"][uid]["expire"] = new_expire
-                groups_col.update_one(
-                    {"chat_id": g["chat_id"]},
-                    {"$set": g}
-                )
+                    del g["premium_users"][uid]
+                    g.get("allowed_users", {}).pop(uid, None)
+                    g.get("targets", {}).pop(uid, None)
+                else:
+                    g["premium_users"][uid]["expire"] = new_expire
+                    groups_col.update_one(
+                        {"chat_id": g["chat_id"]},
+                        {"$set": g}
+                    )
 
                 return await msg.reply_text("BERHASIL KURANG MASA AKTIF")
 
