@@ -722,36 +722,39 @@ async def tambahmasaaktif(update, context):
 async def kurangmasaaktif(update, context):
     msg = update.message
 
-    if msg.chat.type != "private":
-        return await msg.reply_text("COMMAND INI HANYA BISA DI PRIVATE BOT")
+    mode = context.args[0].lower()
+    uid = context.args[1]
 
-    name = context.args[0].lower()
-    reduce_days = int(context.args[1])
+    g = get_group("default")  # sesuaikan kalau kamu pakai gid
 
-    now = time.time()
+    if uid not in g.get("premium_users", {}):
+        return await msg.reply_text("User tidak ditemukan di premium")
 
-    for g in groups_col.find():
-        for uid, data in g.get("premium_users", {}).items():
-            if data["name"] == name:
+    user = g["premium_users"][uid]
 
-                if data["expire"] == -1:
-                    return await msg.reply_text("USER SELAMANYA TIDAK BISA DIKURANGI")
+    # kalau selamanya
+    if user["expire"] == -1:
+        return await msg.reply_text("User selamanya tidak bisa dikurangi")
 
-                new_expire = data["expire"] - (reduce_days * 86400)
+    try:
+        days = int(mode)
+    except ValueError:
+        return await msg.reply_text("Masukkan jumlah hari")
 
-                if new_expire <= now:
-                    del g["premium_users"][uid]
-                    g.get("allowed_users", {}).pop(uid, None)
-                    g.get("targets", {}).pop(uid, None)
-                else:
-                    g["premium_users"][uid]["expire"] = new_expire
-                    groups_col.update_one(
-                        {"chat_id": g["chat_id"]},
-                        {"$set": g}
-                    )
+    # KURANGI masa aktif dengan benar
+    user["expire"] -= days * 86400
 
-                return await msg.reply_text("BERHASIL KURANG MASA AKTIF")
+    # kalau sudah lewat sekarang → hapus premium
+    if user["expire"] <= time.time():
+        del g["premium_users"][uid]
+        g["allowed_users"].pop(uid, None)
+        save_group(g)
+        return await msg.reply_text("Premium sudah habis dan dihapus")
 
+    g["premium_users"][uid] = user
+    save_group(g)
+
+    await msg.reply_text("MASA AKTIF BERHASIL DIKURANGI")
 #================= MAIN =================
 
 app = ApplicationBuilder().token(TOKEN).build()
