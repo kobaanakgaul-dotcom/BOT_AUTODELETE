@@ -725,12 +725,15 @@ async def kurangmasaaktif(update, context):
     if len(context.args) < 2:
         return await msg.reply_text("FORMAT: /kurangmasaaktif user_id hari")
 
-    uid = context.args[0]
+    uid = str(context.args[0])
     days = int(context.args[1])
+
+    found = False
 
     for g in groups_col.find():
         if uid in g.get("premium_users", {}):
 
+            found = True
             user = g["premium_users"][uid]
 
             if user["expire"] == -1:
@@ -740,7 +743,7 @@ async def kurangmasaaktif(update, context):
 
             if user["expire"] <= time.time():
                 del g["premium_users"][uid]
-                g["allowed_users"].pop(uid, None)
+                g.get("allowed_users", {}).pop(uid, None)
 
                 groups_col.update_one(
                     {"chat_id": g["chat_id"]},
@@ -758,7 +761,8 @@ async def kurangmasaaktif(update, context):
 
             return await msg.reply_text("MASA AKTIF DIKURANGI")
 
-    await msg.reply_text("USER TIDAK DITEMUKAN")
+    if not found:
+        await msg.reply_text("USER TIDAK DITEMUKAN")
 
 #================= MAIN =================
 
