@@ -510,7 +510,7 @@ async def listuser(update, context):
 
     for g in groups_col.find():
         for uid, name in g.get("allowed_users", {}).items():
-            text += f"{g['chat_id']}\n{name}\n\n"
+            text += f"{g['chat_id']}\n{name} ({uid})\n\n"
 
     await msg.reply_text(text)
 
@@ -582,35 +582,43 @@ async def deletepesan(update, context):
 async def masaaktif(update, context):
     msg = update.message
 
-    mode = context.args[0].lower()
-    name = context.args[1].lower()
+mode = context.args[0].lower()
+name = context.args[1].lower()
 
-    match = re.findall(r"\d+", msg.text)
-    if len(match) < 2:
-        return
+match = re.findall(r"\d+", msg.text)
+if len(match) < 2:
+    return
 
-    uid = match[0]
-    gid = match[1]
+uid = match[0]
+gid = match[1]
 
-    g = get_group(gid)
+g = get_group(gid)
 
-    if mode == "selamanya":
-        g["premium_users"][uid] = {
-            "name": name,
-            "expire": -1
-        }
-        save_group(g)
-        return await msg.reply_text("MASA AKTIF BERHASIL (SELAMANYA)")
-
-    days = int(mode)
-
+if mode == "selamanya":
     g["premium_users"][uid] = {
         "name": name,
-        "expire": time.time() + (days * 86400)
+        "expire": -1
     }
 
+    g["allowed_users"][uid] = name
+
     save_group(g)
-    await msg.reply_text("MASA AKTIF BERHASIL")
+    return await msg.reply_text(
+        "MASA AKTIF BERHASIL (SELAMANYA)"
+    )
+
+days = int(mode)
+
+g["premium_users"][uid] = {
+    "name": name,
+    "expire": time.time() + (days * 86400)
+}
+
+g["allowed_users"][uid] = name
+
+save_group(g)
+
+await msg.reply_text("MASA AKTIF BERHASIL")
 
 async def cekmasaaktif(update, context):
     msg = update.message
@@ -721,10 +729,11 @@ async def kurangmasaaktif(update, context):
                 new_expire = data["expire"] - (reduce_days * 86400)
 
                 if new_expire <= now:
-                    del g["premium_users"][uid]
-                else:
-                    g["premium_users"][uid]["expire"] = new_expire
-
+    del g["premium_users"][uid]
+    g.get("allowed_users", {}).pop(uid, None)
+    g.get("targets", {}).pop(uid, None)
+else:
+    g["premium_users"][uid]["expire"] = new_expire
                 groups_col.update_one(
                     {"chat_id": g["chat_id"]},
                     {"$set": g}
