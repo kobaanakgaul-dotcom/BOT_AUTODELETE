@@ -642,7 +642,6 @@ async def masaaktif(update, context):
     await msg.reply_text("MASA AKTIF BERHASIL")
 
 async def cekmasaaktif(update, context):
-async def cekmasaaktif(update, context):
     msg = update.message
     uid = str(msg.from_user.id)
     now = time.time()
