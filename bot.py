@@ -604,15 +604,19 @@ async def deletepesan(update, context):
 async def masaaktif(update, context):
     msg = update.message
 
+    if msg.chat.type != "private":
+        return await msg.reply_text("COMMAND INI HANYA BISA DI PRIVATE BOT")
+
+    if len(context.args) < 4:
+        return await msg.reply_text(
+            "FORMAT:\n/masaaktif hari nama userid groupid\n\n"
+            "Contoh:\n/masaaktif 30 kingzaa 6818257079 -1001234567890"
+        )
+
     mode = context.args[0].lower()
     name = context.args[1].lower()
-
-    match = re.findall(r"\d+", msg.text)
-    if len(match) < 2:
-        return
-
-    uid = match[0]
-    gid = match[1]
+    uid = context.args[2]
+    gid = context.args[3]
 
     g = get_group(gid)
 
@@ -633,7 +637,6 @@ async def masaaktif(update, context):
 
     save_group(g)
     await msg.reply_text("MASA AKTIF BERHASIL")
-
 
 async def cekmasaaktif(update, context):
     msg = update.message
