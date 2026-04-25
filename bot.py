@@ -111,21 +111,24 @@ def clean_expired(g):
 
 
 def shutdown(g, user_id=None):
-    # OWNER bypass
     if user_id == OWNER_ID:
         return False
 
+    uid = str(user_id)
     now = time.time()
-    premium_users = g.get("premium_users", {})
 
-    if not premium_users:
+    data = g.get("premium_users", {}).get(uid)
+
+    if not data:
         return True
 
-    for _, data in premium_users.items():
-        exp = data.get("expire", 0)
+    exp = data.get("expire", 0)
 
-        if exp == -1 or exp > now:
-            return False
+    if exp == -1:
+        return False
+
+    if exp > now:
+        return False
 
     return True
 
@@ -639,31 +642,39 @@ async def masaaktif(update, context):
     await msg.reply_text("MASA AKTIF BERHASIL")
 
 async def cekmasaaktif(update, context):
+async def cekmasaaktif(update, context):
     msg = update.message
     uid = str(msg.from_user.id)
+    now = time.time()
 
     for g in groups_col.find():
-        clean_expired(g)
+        premium = g.get("premium_users", {})
 
-        data = g.get("premium_users", {}).get(uid)
+        if uid in premium:
+            data = premium[uid]
+            exp = data.get("expire", 0)
 
-        if data:
-            if data["expire"] == -1:
+            if exp == -1:
                 return await msg.reply_text(
                     "SELAMAT KAMU ORANG TERPILIH BOSS KINGZAA 🔥\n"
-                    "KAMU BISA GUNAKAN SELAMANYA ATAU TANPA BATAS WAKTU🥰"
+                    "KAMU BISA GUNAKAN SELAMANYA TANPA BATAS WAKKTU🥰"
                 )
 
-            sisa = int((data["expire"] - time.time()) / 86400)
+            if exp > now:
+                sisa = int((exp - now) / 86400)
 
-            return await msg.reply_text(
-                f"NAMA: {data['name']}\n"
-                f"GRUP: {g['chat_id']}\n"
-                f"STATUS: AKTIF\n"
-                f"SISA: {sisa} HARI"
-            )
+                return await msg.reply_text(
+                    f"NAMA: {data['name']}\n"
+                    f"STATUS: AKTIF\n"
+                    f"SISA: {sisa} HARI"
+                )
 
-    await msg.reply_text("EXPIRED / TIDAK PREMIUM")
+            else:
+                del g["premium_users"][uid]
+                save_group(g)
+                return await msg.reply_text("EXPIRED / TIDAK PREMIUM")
+
+    return await msg.reply_text("EXPIRED / TIDAK PREMIUM")
 
 
 async def listpremium(update, context):
