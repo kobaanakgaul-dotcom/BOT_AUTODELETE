@@ -581,27 +581,34 @@ async def deletepesan(update, context):
 async def masaaktif(update, context):
     msg = update.message
 
+    if len(context.args) < 4:
+        return await msg.reply_text(
+            "FORMAT:\n/masaaktif hari/nama selamanya nama userid groupid"
+        )
+
     mode = context.args[0].lower()
     name = context.args[1].lower()
-
-    match = re.findall(r"\d+", msg.text)
-    if len(match) < 2:
-        return
-
-    uid = match[0]
-    gid = match[1]
+    uid = context.args[2]
+    gid = context.args[3]
 
     g = get_group(gid)
+
+    if "premium_users" not in g:
+        g["premium_users"] = {}
 
     if mode == "selamanya":
         g["premium_users"][uid] = {
             "name": name,
             "expire": -1
         }
+
         save_group(g)
         return await msg.reply_text("MASA AKTIF BERHASIL (SELAMANYA)")
 
-    days = int(mode)
+    try:
+        days = int(mode)
+    except:
+        return await msg.reply_text("Mode harus angka atau 'selamanya'")
 
     g["premium_users"][uid] = {
         "name": name,
@@ -609,6 +616,7 @@ async def masaaktif(update, context):
     }
 
     save_group(g)
+
     await msg.reply_text("MASA AKTIF BERHASIL")
 
     
