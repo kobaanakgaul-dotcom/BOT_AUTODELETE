@@ -758,14 +758,16 @@ async def kurangmasaaktif(update, context):
                 return await msg.reply_text("BERHASIL KURANG MASA AKTIF")
 
 
+
 #================= MAIN =================
 
 app = ApplicationBuilder().token(TOKEN).build()
 
-app.add_handler(CallbackQueryHandler(confirm_sewa_handler, pattern="^confirm_sewa$"))
-app.add_handler(CallbackQueryHandler(approve_sewa_handler, pattern="^approve_"))
+# 🔥 CALLBACK PALING ATAS
+app.add_handler(CallbackQueryHandler(confirm_sewa_handler, pattern="^confirm_sewa$"), group=0)
+app.add_handler(CallbackQueryHandler(approve_sewa_handler, pattern="^approve_"), group=0)
 
-# utama
+# COMMAND
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("help", help_cmd))
 app.add_handler(CommandHandler("infobot", infobot))
@@ -798,9 +800,10 @@ app.add_handler(CommandHandler("listpremium", listpremium))
 app.add_handler(CommandHandler("tambahmasaaktif", tambahmasaaktif))
 app.add_handler(CommandHandler("kurangmasaaktif", kurangmasaaktif))
 
-# auto delete
-app.add_handler(MessageHandler(~filters.COMMAND, auto_delete))
+# 🔥 AUTO DELETE PALING BAWAH
+app.add_handler(MessageHandler(~filters.COMMAND, auto_delete), group=1)
 
 print("BOT RUNNING...")
+
+# 🔥 FIX 409 + RUN
 app.run_polling(drop_pending_updates=True)
-    
