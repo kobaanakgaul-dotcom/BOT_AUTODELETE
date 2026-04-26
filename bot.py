@@ -105,7 +105,6 @@ def clean_expired(g):
         if exp != -1 and exp <= now:
             del g["premium_users"][uid]
             g.get("allowed_users", {}).pop(uid, None)
-            g.get("targets", {}).pop(uid, None)
 
     save_group(g)
 
