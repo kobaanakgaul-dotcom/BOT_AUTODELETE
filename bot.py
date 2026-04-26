@@ -83,6 +83,7 @@ def get_group(chat_id):
 
     return g
 
+
 def save_group(g):
     groups_col.update_one(
         {"chat_id": g["chat_id"]},
@@ -100,6 +101,7 @@ def clean_expired(g):
     for uid in list(g["premium_users"].keys()):
         exp = g["premium_users"][uid]["expire"]
 
+        # SELAMANYA (-1) tidak dihapus
         if exp != -1 and exp <= now:
             del g["premium_users"][uid]
             g.get("allowed_users", {}).pop(uid, None)
@@ -107,7 +109,9 @@ def clean_expired(g):
 
     save_group(g)
 
+
 def shutdown(g, user_id=None):
+    # OWNER bypass
     if user_id == OWNER_ID:
         return False
 
@@ -124,6 +128,7 @@ def shutdown(g, user_id=None):
             return False
 
     return True
+
 
 def is_allowed(uid, g):
     return uid == OWNER_ID or str(uid) in g.get("allowed_users", {})
@@ -167,10 +172,10 @@ async def success(msg, text):
     bot_msg = await msg.reply_text(text)
     await clean_success(msg, bot_msg)
 
-#================= GLOBAL =================
-
+# GLOBAL (WAJIB DI LUAR FUNCTION)
 pending_confirm = {}
-#================= COMMANDS UTAMA =================
+
+    #================= COMMANDS UTAMA =================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.message
@@ -184,6 +189,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     await msg.reply_text(text)
+
 
 #================= SEWABOT =================
 
@@ -234,33 +240,33 @@ async def sewabot(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await msg.reply_text(text, reply_markup=reply_markup)
 
-#================= CONFIRM =================
-
 async def confirm_sewa_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        print("KEPENCET CONFIRM")
+        print("KEPENCET CONFIRM")  # debug
 
         query = update.callback_query
         if not query:
             return
 
         await query.answer()
-
         await context.bot.send_message(
-            chat_id=OWNER_ID,
-            text="DEBUG: TOMBOL CONFIRM KEPENCET"
+    chat_id=OWNER_ID,
+    text="DEBUG: TOMBOL CONFIRM KEPENCET"
         )
 
         user = query.from_user
 
-        # anti spam
+        # anti spam klik
         if user.id in pending_confirm:
             return await query.answer("SUDAH DIKIRIM, TUNGGU", show_alert=True)
 
+        # simpan ke pending
         pending_confirm[user.id] = True
 
+        # ubah pesan jadi tunggu
         await query.edit_message_text("⏳ KONFIRMASI DIKIRIM, TUNGGU SEBENTAR...")
 
+        # kirim ke owner
         keyboard = [
             [InlineKeyboardButton("✅ TERIMA", callback_data=f"approve_{user.id}")]
         ]
@@ -278,11 +284,9 @@ async def confirm_sewa_handler(update: Update, context: ContextTypes.DEFAULT_TYP
     except Exception as e:
         print("ERROR CONFIRM:", e)
 
-#================= APPROVE =================
-
 async def approve_sewa_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        print("KEPENCET APPROVE")
+        print("KEPENCET APPROVE")  # debug
 
         query = update.callback_query
         if not query:
@@ -290,6 +294,7 @@ async def approve_sewa_handler(update: Update, context: ContextTypes.DEFAULT_TYP
 
         await query.answer()
 
+        # hanya owner
         if query.from_user.id != OWNER_ID:
             return await query.answer("Bukan owner", show_alert=True)
 
@@ -298,10 +303,13 @@ async def approve_sewa_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         if uid not in pending_confirm:
             return await query.answer("DATA TIDAK ADA", show_alert=True)
 
+        # hapus dari pending
         del pending_confirm[uid]
 
+        # edit pesan owner
         await query.edit_message_text("✅ PEMBAYARAN DITERIMA")
 
+        # kirim ke user
         await context.bot.send_message(
             chat_id=uid,
             text="✅ PEMBAYARAN BERHASIL DITERIMA\n\nBOT SUDAH AKTIF 🔥"
@@ -309,7 +317,9 @@ async def approve_sewa_handler(update: Update, context: ContextTypes.DEFAULT_TYP
 
     except Exception as e:
         print("ERROR APPROVE:", e)
-        #================= INFOBOT =================
+
+
+#================= INFOBOT =================
 
 async def infobot(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.message
@@ -333,6 +343,7 @@ async def infobot(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await msg.reply_text(text)
 
+
 #================= HELP =================
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -344,10 +355,11 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     uid = str(msg.from_user.id)
 
-    # OWNER bypass
+    # OWNER langsung lolos
     if uid != str(OWNER_ID):
         allowed = False
 
+        # cek semua grup
         for g in groups_col.find():
             if uid in g.get("allowed_users", {}):
                 allowed = True
@@ -396,6 +408,7 @@ async def add(update, context):
 
     await success(msg, RESP["add"])
 
+
 async def delete(update, context):
     msg = update.message
     g = get_group(msg.chat.id)
@@ -411,6 +424,7 @@ async def delete(update, context):
             save_group(g)
             return await success(msg, RESP["delete"])
 
+
 async def listusn(update, context):
     msg = update.message
     g = get_group(msg.chat.id)
@@ -421,7 +435,8 @@ async def listusn(update, context):
         text += f"{i}. {name} ({uid})\n"
 
     await msg.reply_text(text)
-    #================= USER =================
+
+#================= USER =================
 
 async def adduser(update, context):
     msg = update.message
@@ -440,6 +455,7 @@ async def adduser(update, context):
     save_group(g)
 
     await success(msg, RESP["adduser"])
+
 
 async def deluser(update, context):
     msg = update.message
@@ -503,6 +519,7 @@ async def deluser(update, context):
 
     await msg.reply_text("USER TIDAK DITEMUKAN")
 
+
 async def listuser(update, context):
     msg = update.message
 
@@ -510,7 +527,7 @@ async def listuser(update, context):
 
     for g in groups_col.find():
         for uid, name in g.get("allowed_users", {}).items():
-            text += f"{g['chat_id']}\n{name} ({uid})\n\n"
+            text += f"{g['chat_id']}\n{name}\n\n"
 
     await msg.reply_text(text)
 
@@ -527,6 +544,7 @@ async def addtext(update, context):
 
     await success(msg, RESP["addtext"])
 
+
 async def deltext(update, context):
     msg = update.message
     g = get_group(msg.chat.id)
@@ -538,6 +556,7 @@ async def deltext(update, context):
         save_group(g)
         return await success(msg, RESP["deltext"])
 
+
 async def alltext(update, context):
     msg = update.message
     g = get_group(msg.chat.id)
@@ -548,7 +567,6 @@ async def alltext(update, context):
         text += f"{i}. {t}\n"
 
     await msg.reply_text(text)
-
 #================= FILTER =================
 
 async def filtertext(update, context):
@@ -560,6 +578,7 @@ async def filtertext(update, context):
 
     await success(msg, RESP["delete_on"] if g["filter_text"] else RESP["delete_off"])
 
+
 async def filterfoto(update, context):
     msg = update.message
     g = get_group(msg.chat.id)
@@ -569,6 +588,7 @@ async def filterfoto(update, context):
 
     await success(msg, RESP["delete_on"] if g["filter_foto"] else RESP["delete_off"])
 
+
 async def deletepesan(update, context):
     msg = update.message
     g = get_group(msg.chat.id)
@@ -577,38 +597,33 @@ async def deletepesan(update, context):
     save_group(g)
 
     await success(msg, RESP["delete_on"] if g["delete_on"] else RESP["delete_off"])
-    #================= PREMIUM =================
+
+
+#================= PREMIUM =================
 async def masaaktif(update, context):
     msg = update.message
 
-    if len(context.args) < 4:
-        return await msg.reply_text(
-            "FORMAT:\n/masaaktif hari/nama selamanya nama userid groupid"
-        )
-
     mode = context.args[0].lower()
     name = context.args[1].lower()
-    uid = context.args[2]
-    gid = context.args[3]
+
+    match = re.findall(r"\d+", msg.text)
+    if len(match) < 2:
+        return
+
+    uid = match[0]
+    gid = match[1]
 
     g = get_group(gid)
-
-    if "premium_users" not in g:
-        g["premium_users"] = {}
 
     if mode == "selamanya":
         g["premium_users"][uid] = {
             "name": name,
             "expire": -1
         }
-
         save_group(g)
         return await msg.reply_text("MASA AKTIF BERHASIL (SELAMANYA)")
 
-    try:
-        days = int(mode)
-    except:
-        return await msg.reply_text("Mode harus angka atau 'selamanya'")
+    days = int(mode)
 
     g["premium_users"][uid] = {
         "name": name,
@@ -616,10 +631,8 @@ async def masaaktif(update, context):
     }
 
     save_group(g)
-
     await msg.reply_text("MASA AKTIF BERHASIL")
 
-    
 async def cekmasaaktif(update, context):
     msg = update.message
     uid = str(msg.from_user.id)
@@ -646,6 +659,7 @@ async def cekmasaaktif(update, context):
             )
 
     await msg.reply_text("EXPIRED / TIDAK PREMIUM")
+
 
 async def listpremium(update, context):
     msg = update.message
@@ -678,6 +692,7 @@ async def listpremium(update, context):
 
     await msg.reply_text(text)
 
+
 async def tambahmasaaktif(update, context):
     msg = update.message
 
@@ -708,95 +723,28 @@ async def tambahmasaaktif(update, context):
 
                 return await msg.reply_text("BERHASIL TAMBAH MASA AKTIF")
 
+
 async def kurangmasaaktif(update, context):
     msg = update.message
 
-    if len(context.args) < 2:
-        return await msg.reply_text("FORMAT: /kurangmasaaktif nama hari")
+    if msg.chat.type != "private":
+        return await msg.reply_text("COMMAND INI HANYA BISA DI PRIVATE BOT")
 
-    name = context.args[0].lower().strip()
+    name = context.args[0].lower()
+    reduce_days = int(context.args[1])
 
-    try:
-        days = int(context.args[1])
-    except:
-        return await msg.reply_text("HARI HARUS ANGKA")
+    now = time.time()
 
     for g in groups_col.find():
         for uid, data in g.get("premium_users", {}).items():
+            if data["name"] == name:
 
-            if data.get("name", "").lower().strip() == name:
+                if data["expire"] == -1:
+                    return await msg.reply_text("USER SELAMANYA TIDAK BISA DIKURANGI")
 
-                user = data
+                new_expire = data["expire"] - (reduce_days * 86400)
 
-                if user["expire"] == -1:
-                    return await msg.reply_text("USER SELAMANYA")
-
-                user["expire"] -= days * 86400
-
-                if user["expire"] <= time.time():
+                if new_expire <= now:
                     del g["premium_users"][uid]
-                    g.get("allowed_users", {}).pop(uid, None)
-
-                    groups_col.update_one(
-                        {"chat_id": g["chat_id"]},
-                        {"$set": g}
-                    )
-
-                    return await msg.reply_text("PREMIUM DIHAPUS (EXPIRED)")
-
-                g["premium_users"][uid] = user
-
-                groups_col.update_one(
-                    {"chat_id": g["chat_id"]},
-                    {"$set": g}
-                )
-
-                return await msg.reply_text("MASA AKTIF DIKURANGI")
-
-    await msg.reply_text("USER TIDAK DITEMUKAN")
-
-#================= MAIN =================
-
-app = ApplicationBuilder().token(TOKEN).build()
-
-app.add_handler(CallbackQueryHandler(confirm_sewa_handler, pattern="^confirm_sewa$"))
-app.add_handler(CallbackQueryHandler(approve_sewa_handler, pattern="^approve_"))
-
-# utama
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("help", help_cmd))
-app.add_handler(CommandHandler("infobot", infobot))
-app.add_handler(CommandHandler("sewabot", sewabot))
-
-# target
-app.add_handler(CommandHandler("add", add))
-app.add_handler(CommandHandler("delete", delete))
-app.add_handler(CommandHandler("listusn", listusn))
-
-# user
-app.add_handler(CommandHandler("adduser", adduser))
-app.add_handler(CommandHandler("deluser", deluser))
-app.add_handler(CommandHandler("listuser", listuser))
-
-# text
-app.add_handler(CommandHandler("addtext", addtext))
-app.add_handler(CommandHandler("deltext", deltext))
-app.add_handler(CommandHandler("alltext", alltext))
-
-# filter
-app.add_handler(CommandHandler("filtertext", filtertext))
-app.add_handler(CommandHandler("filterfoto", filterfoto))
-app.add_handler(CommandHandler("deletepesan", deletepesan))
-
-# premium
-app.add_handler(CommandHandler("masaaktif", masaaktif))
-app.add_handler(CommandHandler("cekmasaaktif", cekmasaaktif))
-app.add_handler(CommandHandler("listpremium", listpremium))
-app.add_handler(CommandHandler("tambahmasaaktif", tambahmasaaktif))
-app.add_handler(CommandHandler("kurangmasaaktif", kurangmasaaktif))
-
-# auto delete
-app.add_handler(MessageHandler(~filters.COMMAND, auto_delete))
-
-print("BOT RUNNING...")
-app.run_polling(drop_pending_updates=True)
+                else:
+                    g["premium_users"][uid]["ex
