@@ -603,27 +603,34 @@ async def deletepesan(update, context):
 async def masaaktif(update, context):
     msg = update.message
 
+    if len(context.args) < 4:
+        return await msg.reply_text(
+            "FORMAT:\n/masaaktif hari/nama selamanya nama userid groupid"
+        )
+
     mode = context.args[0].lower()
     name = context.args[1].lower()
-
-    match = re.findall(r"\d+", msg.text)
-    if len(match) < 2:
-        return
-
-    uid = match[0]
-    gid = match[1]
+    uid = context.args[2]
+    gid = context.args[3]
 
     g = get_group(gid)
+
+    if "premium_users" not in g:
+        g["premium_users"] = {}
 
     if mode == "selamanya":
         g["premium_users"][uid] = {
             "name": name,
             "expire": -1
         }
+
         save_group(g)
         return await msg.reply_text("MASA AKTIF BERHASIL (SELAMANYA)")
 
-    days = int(mode)
+    try:
+        days = int(mode)
+    except:
+        return await msg.reply_text("Mode harus angka atau 'selamanya'")
 
     g["premium_users"][uid] = {
         "name": name,
@@ -631,6 +638,7 @@ async def masaaktif(update, context):
     }
 
     save_group(g)
+
     await msg.reply_text("MASA AKTIF BERHASIL")
 
 async def cekmasaaktif(update, context):
@@ -747,4 +755,59 @@ async def kurangmasaaktif(update, context):
                 if new_expire <= now:
                     del g["premium_users"][uid]
                 else:
-                    g["premium_users"][uid]["ex
+                    g["premium_users"][uid]["expire"] = new_expire
+
+                groups_col.update_one(
+                    {"chat_id": g["chat_id"]},
+                    {"$set": g}
+                )
+
+                return await msg.reply_text("BERHASIL KURANG MASA AKTIF")
+
+
+#================= MAIN =================
+
+app = ApplicationBuilder().token(TOKEN).build()
+
+app.add_handler(CallbackQueryHandler(confirm_sewa_handler, pattern="^confirm_sewa$"))
+app.add_handler(CallbackQueryHandler(approve_sewa_handler, pattern="^approve_"))
+
+# utama
+app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("help", help_cmd))
+app.add_handler(CommandHandler("infobot", infobot))
+app.add_handler(CommandHandler("sewabot", sewabot))
+
+# target
+app.add_handler(CommandHandler("add", add))
+app.add_handler(CommandHandler("delete", delete))
+app.add_handler(CommandHandler("listusn", listusn))
+
+# user
+app.add_handler(CommandHandler("adduser", adduser))
+app.add_handler(CommandHandler("deluser", deluser))
+app.add_handler(CommandHandler("listuser", listuser))
+
+# text
+app.add_handler(CommandHandler("addtext", addtext))
+app.add_handler(CommandHandler("deltext", deltext))
+app.add_handler(CommandHandler("alltext", alltext))
+
+# filter
+app.add_handler(CommandHandler("filtertext", filtertext))
+app.add_handler(CommandHandler("filterfoto", filterfoto))
+app.add_handler(CommandHandler("deletepesan", deletepesan))
+
+# premium
+app.add_handler(CommandHandler("masaaktif", masaaktif))
+app.add_handler(CommandHandler("cekmasaaktif", cekmasaaktif))
+app.add_handler(CommandHandler("listpremium", listpremium))
+app.add_handler(CommandHandler("tambahmasaaktif", tambahmasaaktif))
+app.add_handler(CommandHandler("kurangmasaaktif", kurangmasaaktif))
+
+# auto delete
+app.add_handler(MessageHandler(~filters.COMMAND, auto_delete))
+
+print("BOT RUNNING...")
+app.run_polling(drop_pending_updates=True)
+    
