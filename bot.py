@@ -478,9 +478,6 @@ async def deluser(update, context):
                     if uid in g.get("premium_users", {}):
                         del g["premium_users"][uid]
 
-                    if uid in g.get("targets", {}):
-                        del g["targets"][uid]
-
                     changed = True
                     found = True
 
