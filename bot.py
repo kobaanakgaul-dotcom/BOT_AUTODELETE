@@ -426,12 +426,41 @@ async def delete(update, context):
 
 async def listusn(update, context):
     msg = update.message
+
+    # PRIVATE MODE (KHUSUS OWNER)
+    if msg.chat.type == "private":
+        if msg.from_user.id != OWNER_ID:
+            return await msg.reply_text("KHUSUS OWNER")
+
+        if len(context.args) < 1:
+            return await msg.reply_text("FORMAT: /listusn idgrup")
+
+        gid = context.args[0]
+        g = groups_col.find_one({"chat_id": str(gid)})
+
+        if not g:
+            return await msg.reply_text("GRUP TIDAK DITEMUKAN")
+
+        text = "𝐋𝐈𝐒𝐓 𝐓𝐀𝐑𝐆𝐄𝐓:\n\n"
+
+        if not g.get("targets"):
+            text += "KOSONG"
+        else:
+            for i, (uid, name) in enumerate(g["targets"].items(), 1):
+                text += f"{i}. {name} ({uid})\n"
+
+        return await msg.reply_text(text)
+
+    # GROUP MODE (normal)
     g = get_group(msg.chat.id)
 
     text = "𝐋𝐈𝐒𝐓 𝐓𝐀𝐑𝐆𝐄𝐓:\n\n"
 
-    for i, (uid, name) in enumerate(g["targets"].items(), 1):
-        text += f"{i}. {name} ({uid})\n"
+    if not g.get("targets"):
+        text += "KOSONG"
+    else:
+        for i, (uid, name) in enumerate(g["targets"].items(), 1):
+            text += f"{i}. {name} ({uid})\n"
 
     await msg.reply_text(text)
 
@@ -552,12 +581,41 @@ async def deltext(update, context):
 
 async def alltext(update, context):
     msg = update.message
+
+    # PRIVATE MODE (KHUSUS OWNER)
+    if msg.chat.type == "private":
+        if msg.from_user.id != OWNER_ID:
+            return await msg.reply_text("KHUSUS OWNER")
+
+        if len(context.args) < 1:
+            return await msg.reply_text("FORMAT: /alltext idgrup")
+
+        gid = context.args[0]
+        g = groups_col.find_one({"chat_id": str(gid)})
+
+        if not g:
+            return await msg.reply_text("GRUP TIDAK DITEMUKAN")
+
+        text = "𝐋𝐈𝐒𝐓 𝐓𝐄𝐗𝐓:\n\n"
+
+        if not g.get("texts"):
+            text += "KOSONG"
+        else:
+            for i, t in enumerate(g["texts"], 1):
+                text += f"{i}. {t}\n"
+
+        return await msg.reply_text(text)
+
+    # GROUP MODE (normal)
     g = get_group(msg.chat.id)
 
     text = "𝐋𝐈𝐒𝐓 𝐓𝐄𝐗𝐓:\n\n"
 
-    for i, t in enumerate(g["texts"], 1):
-        text += f"{i}. {t}\n"
+    if not g.get("texts"):
+        text += "KOSONG"
+    else:
+        for i, t in enumerate(g["texts"], 1):
+            text += f"{i}. {t}\n"
 
     await msg.reply_text(text)
 #================= FILTER =================
