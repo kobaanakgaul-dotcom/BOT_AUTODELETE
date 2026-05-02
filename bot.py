@@ -427,8 +427,10 @@ async def delete(update, context):
 async def listusn(update, context):
     msg = update.message
 
-    # PRIVATE MODE (KHUSUS OWNER)
+    # ================= PRIVATE MODE =================
     if msg.chat.type == "private":
+
+        # OWNER ONLY di private
         if msg.from_user.id != OWNER_ID:
             return await msg.reply_text("KHUSUS OWNER")
 
@@ -436,34 +438,25 @@ async def listusn(update, context):
             return await msg.reply_text("FORMAT: /listusn idgrup")
 
         gid = context.args[0]
-        g = groups_col.find_one({"chat_id": str(gid)})
+        g = get_group(gid)
 
-        if not g:
-            return await msg.reply_text("GRUP TIDAK DITEMUKAN")
+    # ================= GROUP MODE =================
+    else:
+        g = get_group(msg.chat.id)
 
-        text = "𝐋𝐈𝐒𝐓 𝐓𝐀𝐑𝐆𝐄𝐓:\n\n"
+        # allowed user / owner
+        if not is_allowed(msg.from_user.id, g):
+            return await reject(msg)
 
-        if not g.get("targets"):
-            text += "KOSONG"
-        else:
-            for i, (uid, name) in enumerate(g["targets"].items(), 1):
-                text += f"{i}. {name} ({uid})\n"
-
-        return await msg.reply_text(text)
-
-    # GROUP MODE (normal)
-    g = get_group(msg.chat.id)
+    if not g["targets"]:
+        return await msg.reply_text("LIST TARGET KOSONG")
 
     text = "𝐋𝐈𝐒𝐓 𝐓𝐀𝐑𝐆𝐄𝐓:\n\n"
 
-    if not g.get("targets"):
-        text += "KOSONG"
-    else:
-        for i, (uid, name) in enumerate(g["targets"].items(), 1):
-            text += f"{i}. {name} ({uid})\n"
+    for i, (uid, name) in enumerate(g["targets"].items(), 1):
+        text += f"{i}. {name} ({uid})\n"
 
     await msg.reply_text(text)
-
 #================= USER =================
 
 async def adduser(update, context):
@@ -542,17 +535,21 @@ async def deluser(update, context):
     await msg.reply_text("USER TIDAK DITEMUKAN")
 
 
+
 async def listuser(update, context):
     msg = update.message
+
+    # OWNER ONLY (grup & private)
+    if msg.from_user.id != OWNER_ID:
+        return await msg.reply_text("KHUSUS OWNER")
 
     text = "𝐋𝐈𝐒𝐓 𝐔𝐒𝐄𝐑:\n\n"
 
     for g in groups_col.find():
         for uid, name in g.get("allowed_users", {}).items():
-            text += f"{g['chat_id']}\n{name}\n\n"
+            text += f"{g['chat_id']}\n{name} ({uid})\n\n"
 
     await msg.reply_text(text)
-
 #================= TEXT =================
 
 async def addtext(update, context):
@@ -582,8 +579,10 @@ async def deltext(update, context):
 async def alltext(update, context):
     msg = update.message
 
-    # PRIVATE MODE (KHUSUS OWNER)
+    # ================= PRIVATE MODE =================
     if msg.chat.type == "private":
+
+        # OWNER ONLY
         if msg.from_user.id != OWNER_ID:
             return await msg.reply_text("KHUSUS OWNER")
 
@@ -591,31 +590,23 @@ async def alltext(update, context):
             return await msg.reply_text("FORMAT: /alltext idgrup")
 
         gid = context.args[0]
-        g = groups_col.find_one({"chat_id": str(gid)})
+        g = get_group(gid)
 
-        if not g:
-            return await msg.reply_text("GRUP TIDAK DITEMUKAN")
+    # ================= GROUP MODE =================
+    else:
+        g = get_group(msg.chat.id)
 
-        text = "𝐋𝐈𝐒𝐓 𝐓𝐄𝐗𝐓:\n\n"
+        # allowed user / owner
+        if not is_allowed(msg.from_user.id, g):
+            return await reject(msg)
 
-        if not g.get("texts"):
-            text += "KOSONG"
-        else:
-            for i, t in enumerate(g["texts"], 1):
-                text += f"{i}. {t}\n"
-
-        return await msg.reply_text(text)
-
-    # GROUP MODE (normal)
-    g = get_group(msg.chat.id)
+    if not g["texts"]:
+        return await msg.reply_text("LIST TEXT KOSONG")
 
     text = "𝐋𝐈𝐒𝐓 𝐓𝐄𝐗𝐓:\n\n"
 
-    if not g.get("texts"):
-        text += "KOSONG"
-    else:
-        for i, t in enumerate(g["texts"], 1):
-            text += f"{i}. {t}\n"
+    for i, t in enumerate(g["texts"], 1):
+        text += f"{i}. {t}\n"
 
     await msg.reply_text(text)
 #================= FILTER =================
