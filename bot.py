@@ -796,6 +796,7 @@ async def kurangmasaaktif(update, context):
 
                 if new_expire <= now:
                     del g["premium_users"][uid]
+                    g.get("allowed_users", {}).pop(uid, None)
                 else:
                     g["premium_users"][uid]["expire"] = new_expire
 
