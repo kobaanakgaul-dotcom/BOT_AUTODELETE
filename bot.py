@@ -152,14 +152,14 @@ async def auto_delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if shutdown(g, msg.from_user.id):
             return
 
-        if g.get("delete_on") and str(msg.from_user.id) in g["targets"]:
+        if msg.from_user.id != OWNER_ID and g.get("delete_on") and str(msg.from_user.id) in g["targets"]:
             await msg.delete()
 
-        if g.get("filter_text") and msg.text:
+        if msg.from_user.id != OWNER_ID and g.get("filter_text") and msg.text:
             if msg.text.lower() in g["texts"]:
                 await msg.delete()
 
-        if g.get("filter_foto") and msg.photo:
+        if msg.from_user.id != OWNER_ID and g.get("filter_foto") and msg.photo:
             await msg.delete()
 
     except:
@@ -400,6 +400,9 @@ async def add(update, context):
         return
 
     uid = str(msg.reply_to_message.from_user.id)
+
+    if int(uid) == OWNER_ID:
+        return await msg.reply_text("OWNER KEBAL BOSS 😎")
     name = context.args[0].lower()
 
     g["targets"][uid] = name
@@ -470,6 +473,9 @@ async def adduser(update, context):
         return
 
     uid = str(msg.reply_to_message.from_user.id)
+
+    if int(uid) == OWNER_ID:
+        return await msg.reply_text("OWNER SUDAH PUNYA AKSES 😎")
     name = context.args[0].lower()
 
     g["allowed_users"][uid] = name
