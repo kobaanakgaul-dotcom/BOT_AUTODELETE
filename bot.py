@@ -3,6 +3,7 @@ import time
 import re
 import asyncio
 import logging
+from datetime import datetime, timedelta, timezone
 
 from telegram.ext import CallbackQueryHandler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -813,7 +814,25 @@ async def kurangmasaaktif(update, context):
 
                 return await msg.reply_text("BERHASIL KURANG MASA AKTIF")
 
+async def rekapkata(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = update.message
 
+    if len(context.args) < 1:
+        return await msg.reply_text("FORMAT: /rekapkata kata")
+
+    kata_list = [k.lower() for k in context.args]
+
+    wib = timezone(timedelta(hours=7))
+    now = datetime.now(wib)
+
+    hasil = (
+        f"📊 JUMLAH PESAN HARI INI\n"
+        f"📅 {now.strftime('%d-%m-%Y')}\n\n"
+        f"📝 PESAN DICARI: {', '.join(kata_list)}\n\n"
+        "FITUR REKAP BELUM DISAMBUNGIN KE DATABASE CHAT"
+    )
+
+    await msg.reply_text(hasil)
 
 #================= MAIN =================
 
@@ -828,6 +847,7 @@ app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("help", help_cmd))
 app.add_handler(CommandHandler("infobot", infobot))
 app.add_handler(CommandHandler("sewabot", sewabot))
+app.add_handler(CommandHandler("rekapkata", rekapkata))
 
 # target
 app.add_handler(CommandHandler("add", add))
