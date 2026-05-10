@@ -32,7 +32,7 @@ OWNER_USERNAME = "@KINGZAAASLI"
 client = MongoClient(MONGO_URI)
 db = client["telegram_bot"]
 groups_col = db["groups"]
-
+chat_logs = db["chat_logs"]
 #================= RESPONSE =================
 
 RESP = {
@@ -139,7 +139,6 @@ async def reject(msg):
     await msg.reply_text(f"𝗠𝗜𝗡𝗧𝗔 𝗜𝗭𝗜𝗡 𝗦𝗔𝗠𝗔 {OWNER_USERNAME}")
 
 #================= AUTO DELETE =================
-
 async def auto_delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         msg = update.message
@@ -150,21 +149,47 @@ async def auto_delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
         g = get_group(msg.chat.id)
         clean_expired(g)
 
+        # SIMPAN CHAT
+        text_msg = msg.text or msg.caption or ""
+
+        chat_logs.insert_one({
+            "chat_id": str(msg.chat.id),
+            "user_id": str(msg.from_user.id),
+            "name": msg.from_user.first_name,
+            "username": msg.from_user.username or "",
+            "text": text_msg.lower(),
+            "time": time.time()
+        })
+
         if shutdown(g, msg.from_user.id):
             return
 
-        if msg.from_user.id != OWNER_ID and g.get("delete_on") and str(msg.from_user.id) in g["targets"]:
+        if (
+            msg.from_user.id != OWNER_ID
+            and g.get("delete_on")
+            and str(msg.from_user.id) in g["targets"]
+        ):
             await msg.delete()
 
-        if msg.from_user.id != OWNER_ID and g.get("filter_text") and msg.text:
+        if (
+            msg.from_user.id != OWNER_ID
+            and g.get("filter_text")
+            and msg.text
+        ):
             if msg.text.lower() in g["texts"]:
                 await msg.delete()
 
-        if msg.from_user.id != OWNER_ID and g.get("filter_foto") and msg.photo:
+        if (
+            msg.from_user.id != OWNER_ID
+            and g.get("filter_foto")
+            and msg.photo
+        ):
             await msg.delete()
 
     except:
         pass
+
+
 
 #================= WRAPPER =================
 
@@ -825,12 +850,53 @@ async def rekapkata(update: Update, context: ContextTypes.DEFAULT_TYPE):
     wib = timezone(timedelta(hours=7))
     now = datetime.now(wib)
 
+    start = datetime(now.year, now.month, now.day, tzinfo=wib).timestamp()
+
+    hasil_user = {}
+
+    data = chat_logs.find({
+        "chat_id": str(msg.chat.id),
+        "time": {"$gte": start}
+    })
+
+    for d in data:
+        text = d.get("text", "")
+
+        if any(k in text for k in kata_list):
+            uid = d["user_id"]
+
+            if uid not in hasil_user:
+                hasil_user[uid] = {
+                    "name": d.get("name", "Unknown"),
+                    "count": 0
+                }
+
+            hasil_user[uid]["count"] += 1
+
     hasil = (
         f"📊 JUMLAH PESAN HARI INI\n"
         f"📅 {now.strftime('%d-%m-%Y')}\n\n"
         f"📝 PESAN DICARI: {', '.join(kata_list)}\n\n"
-        "FITUR REKAP BELUM DISAMBUNGIN KE DATABASE CHAT"
     )
+
+    if not hasil_user:
+        hasil += "TIDAK ADA DATA"
+    else:
+        no = 1
+
+        sorted_users = sorted(
+            hasil_user.items(),
+            key=lambda x: x[1]["count"],
+            reverse=True
+        )
+
+        for uid, user in sorted_users:
+            hasil += (
+                f"{no}. {user['name']}\n"
+                f"🆔 {uid}\n"
+                f"📨 {user['count']} pesan\n\n"
+            )
+            no += 1
 
     await msg.reply_text(hasil)
 
