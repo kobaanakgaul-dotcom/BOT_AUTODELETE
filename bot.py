@@ -842,6 +842,9 @@ async def kurangmasaaktif(update, context):
 async def rekapkata(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.message
 
+    if msg.from_user.id != OWNER_ID:
+        return await msg.reply_text("KHUSUS OWNER BOT")
+
     if len(context.args) < 1:
         return await msg.reply_text("FORMAT: /rekapkata kata")
 
@@ -860,7 +863,7 @@ async def rekapkata(update: Update, context: ContextTypes.DEFAULT_TYPE):
     })
 
     for d in data:
-        text = d.get("text", "")
+        text = d.get("text", "").lower()
 
         if any(k in text for k in kata_list):
             uid = d["user_id"]
